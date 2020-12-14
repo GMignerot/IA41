@@ -16,6 +16,26 @@ class Direction (enum.Enum):
 	Bottom = (0, 1)
 	Left = (-1, 0)
 	Right = (1, 0)
+	
+REVERSE_DIRECTION = {Direction.Top: Direction.Bottom, Direction.Bottom: Direction.Top, Direction.Left: Direction.Right, Direction.Right: Direction.Left}
+
+# [0 1 2]
+# [3 4 5]
+# [6 7 8]
+
+EMPTY_POSITIONS = {
+	0: {1: Direction.Right, 2: Direction.Right, 3: Direction.Bottom, 6: Direction.Bottom},
+	1: {0: Direction.Left, 2: Direction.Right, 4: Direction.Bottom, 7: Direction.Bottom},
+	2: {0: Direction.Left, 1: Direction.Left, 5: Direction.Bottom, 8: Direction.Bottom},
+	3: {0: Direction.Top, 4: Direction.Right, 5: Direction.Right, 6: Direction.Bottom},
+	4: {1: Direction.Top, 3: Direction.Left, 5: Direction.Right, 7: Direction.Bottom},
+	5: {2: Direction.Top, 3: Direction.Left, 4: Direction.Left, 8: Direction.Bottom},
+	6: {0: Direction.Top, 3: Direction.Top, 7: Direction.Right, 8: Direction.Right},
+	7: {1: Direction.Top, 4: Direction.Top, 6: Direction.Left, 8: Direction.Right},
+	8: {2: Direction.Top, 5: Direction.Top, 6: Direction.Left, 7: Direction.Left},
+}
+
+PLAYERS = (Slot.Player1, Slot.Player2)
 
 
 class Transition (object):
@@ -34,30 +54,19 @@ class Transition (object):
 		return self.__str__()
 
 
-EMPTY_POSITIONS = {
-	0: {1: Direction.Right, 2: Direction.Right, 3: Direction.Bottom, 4: Direction.Bottom},
-	1: {0: Direction.Left, 2: Direction.Right, 4: Direction.Bottom, 7: Direction.Bottom},
-	2: {0: Direction.Left, 1: Direction.Left, 5: Direction.Bottom, 8: Direction.Bottom},
-	3: {0: Direction.Top, 4: Direction.Right, 5: Direction.Right, 6: Direction.Bottom},
-	4: {1: Direction.Top, 3: Direction.Left, 5: Direction.Right, 7: Direction.Bottom},
-	5: {2: Direction.Top, 4: Direction.Left, 4: Direction.Left, 8: Direction.Bottom},
-	6: {0: Direction.Top, 3: Direction.Top, 7: Direction.Right, 8: Direction.Right},
-	7: {1: Direction.Top, 4: Direction.Top, 6: Direction.Left, 8: Direction.Right},
-	8: {2: Direction.Top, 5: Direction.Top, 6: Direction.Left, 7: Direction.Left},
-}
-
-PLAYERS = (Slot.Player1, Slot.Player2)
-
 class State (object):
 	def __init__(self):
 		self.board = [Slot.Square, Slot.Square, Slot.Square, Slot.Square, Slot.Empty, Slot.Square, Slot.Square, Slot.Square, Slot.Square]
 		self.actioncache = {Slot.Player1: None, Slot.Player2: None}
+		self.origin = None
 		
-	def apply(self, transition, player):
-		if transition not in self.possibleActions(player):
-			raise ValueError("Impossible transition")
+	def apply(self, transition, player, check=True):
+		if check:
+			if transition not in self.possibleActions(player):
+				raise ValueError("Impossible transition")
 		
 		newstate = self.copy()
+		newstate.origin = self
 		
 		if transition.type == TransitionType.AddCircle:
 			newstate.board[transition.position] = player
@@ -107,28 +116,35 @@ class State (object):
 							
 				# PushSquare
 				if emptypos in EMPTY_POSITIONS[position]:
-					moglichkeiten.append(Transition(TransitionType.PushSquare, position, EMPTY_POSITIONS[position][emptypos]))
+					transition = Transition(TransitionType.PushSquare, position, EMPTY_POSITIONS[position][emptypos])
+					if self.origin != self.apply(transition, player, False):
+						moglichkeiten.append(transition)
 			
 			self.actioncache[player] = moglichkeiten
 			return moglichkeiten
 	
 	def win(self):
-		"""Si une configuration gagnante est trouvée, retourne les cases de l’alignement. Sinon, renvoie None"""
+		"""Si une configuration gagnante est trouvée, retourne le gagnant et les cases de l’alignement. Sinon, renvoie None"""
 		for i in range(3):
 			if self.board[i] == self.board[i + 3] == self.board[i + 6] and self.board[i] in PLAYERS:  # colonne
-				return (i, i+3, i+6)
+				return self.board[i], (i, i+3, i+6)
 			if self.board[i*3] == self.board[i*3 + 1] == self.board[i*3 + 2] and self.board[i*3] in PLAYERS:  # ligne
-				return self.board[i*3]
+				return self.board[i*3], (i*3, i*3+1, i*3+2)
+		# Diagonales
 		if self.board[0] == self.board[4] == self.board[8] and self.board[0] in PLAYERS:
-			return (0, 4, 8)
+			return self.board[0], (0, 4, 8)
 		if self.board[2] == self.board[4] == self.board[6] and self.board[2] in PLAYERS:
-			return (2, 4, 6)
-		return None
+			return self.board[2], (2, 4, 6)
+		return None, None
 	
 	def copy(self):
 		newstate = State()
 		newstate.board = self.board.copy()
 		return newstate
+	
+	def __eq__(self, state):
+		if state is None: return False
+		return self.board == state.board
 	
 	def __str__(self):
 		board = [slot.value for slot in self.board]
