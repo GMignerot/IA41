@@ -7,6 +7,7 @@ class Slot (enum.Enum):
 	Player2 = 3
 
 class TransitionType (enum.Enum):
+	Null = 0
 	AddCircle = 1
 	PushSquare = 2
 	MoveCircle = 3
@@ -59,6 +60,11 @@ class State (object):
 		self.board = [Slot.Square, Slot.Square, Slot.Square, Slot.Square, Slot.Empty, Slot.Square, Slot.Square, Slot.Square, Slot.Square]
 		self.actioncache = {Slot.Player1: None, Slot.Player2: None}
 		self.origin = None
+		self.playerhistory = ()
+		self.opponenthistory = ()
+		self.originplayer = None
+		self.originaction = Transition(TransitionType.Null, 0)
+		self.branchlength = 0
 		
 	def apply(self, transition, player, check=True):
 		if check:
@@ -67,6 +73,11 @@ class State (object):
 		
 		newstate = self.copy()
 		newstate.origin = self
+		newstate.originplayer = player
+		newstate.originaction = transition
+		newstate.branchlength = self.branchlength + 1
+		newstate.playerhistory = self.opponenthistory + (self, )
+		newstate.opponenthistory = self.playerhistory
 		
 		if transition.type == TransitionType.AddCircle:
 			newstate.board[transition.position] = player
@@ -117,7 +128,13 @@ class State (object):
 				# PushSquare
 				if emptypos in EMPTY_POSITIONS[position]:
 					transition = Transition(TransitionType.PushSquare, position, EMPTY_POSITIONS[position][emptypos])
-					if self.origin != self.apply(transition, player, False):
+					if transition.type == self.originaction.type == TransitionType.PushSquare:
+						if transition.value.value[0] == -self.originaction.value.value[0] and transition.value.value[1] == -self.originaction.value.value[1]:
+							if self.origin != self.apply(transition, player, False):
+								moglichkeiten.append(transition)
+						else:
+							moglichkeiten.append(transition)
+					else:
 						moglichkeiten.append(transition)
 			
 			self.actioncache[player] = moglichkeiten

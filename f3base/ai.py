@@ -1,29 +1,55 @@
 import math
+import enum
 from .state import Slot, State
 
 
-def value(state, player, opponent, turn):
+class Config (enum.Enum):
+	PvP = 0
+	PvAI = 1
+	AIvAI = 2
+
+def finalvalue(state, player, opponent):
 	winner, line = state.win()
 	if winner is None:
 		return 0
 	elif winner == player:
-		return 100*turn
+		return 10000
 	elif winner == opponent:
-		return -100*turn
+		return -10000
 
-def maxvalue(state, player, opponent, playerpassed, opponentpassed, alpha, beta, horizon):
-	if state.win()[0] is not None or state in playerpassed or horizon == 0:
-		return value(state, player, opponent, len(playerpassed)), None
+def value(state, player, opponent, turn):
+	winner, line = state.win()
+	if winner == player:
+		return 10000
+	elif winner == opponent:
+		return -10000
+	else:  # Fonction d'évaluation très arbitraire
+		playertokens = 0
+		opponenttokens = 0
+		emptytokens = 0
+		for slot in state.board:
+			if slot == player:
+				playertokens += 1
+			elif slot == opponent:
+				opponenttokens += 1
+			elif slot == Slot.Square:
+				emptytokens += 1
+		actioncount = len(state.possibleActions(player))
+		return ((playertokens / (opponenttokens + emptytokens)) * 100 - (opponenttokens / (playertokens + emptytokens)) * 100) + actioncount - 2 + 8/turn
+		
+
+def maxvalue(state, player, opponent, alpha, beta, horizon, config):
+	if state.win()[0] is not None or (state in state.playerhistory and config == Config.AIvAI):
+		return finalvalue(state, player, opponent), None
+	elif horizon == 0:
+		return value(state, player, opponent, state.branchlength // 2), None
 	actions = state.possibleActions(player)
-	#print(f"Max : {len(actions)}")
 	if len(actions) == 0:
-		return value(state, player, opponent, len(playerpassed)), None
-	playerpassed += (state, )
-	#print(f"\r{len(playerpassed)}, {len(opponentpassed)}, {len(actions)}   ", end="")
+		return finalvalue(state, player, opponent, len(playerpassed)), None
 	maxresult = -math.inf
 	maxaction = None
 	for transition in actions:
-		result, _ = minvalue(state.apply(transition, player), player, opponent, playerpassed, opponentpassed, alpha, beta, horizon-1)
+		result, _ = minvalue(state.apply(transition, player), player, opponent, alpha, beta, horizon-1, config)
 		if result > maxresult:
 			maxresult = result
 			maxaction = transition
@@ -32,19 +58,18 @@ def maxvalue(state, player, opponent, playerpassed, opponentpassed, alpha, beta,
 		alpha = max(alpha, maxresult)
 	return maxresult, maxaction
 
-def minvalue(state, player, opponent, playerpassed, opponentpassed, alpha, beta, horizon):
-	if state.win()[0] is not None or state in opponentpassed or horizon == 0:
-		return value(state, player, opponent, len(playerpassed)), None
+def minvalue(state, player, opponent, alpha, beta, horizon, config):
+	if state.win()[0] is not None or (state in state.playerhistory and config == Config.AIvAI):
+		return -finalvalue(state, opponent, player), None
+	elif horizon == 0:
+		return -value(state, opponent, player, state.branchlength // 2), None
 	actions = state.possibleActions(opponent)
-	#print(f"Min : {len(actions)}")
 	if len(actions) == 0:
-		return value(state, player, opponent, len(playerpassed)), None
-	opponentpassed += (state, )
-	#print(f"\r{len(playerpassed)}, {len(opponentpassed)}, {len(actions)}   ", end="")
+		return finalvalue(state, player, opponent, len(playerpassed)), None
 	minresult = +math.inf
 	maxaction = None
 	for transition in state.possibleActions(opponent):
-		result, _ = maxvalue(state.apply(transition, opponent), player, opponent, playerpassed, opponentpassed, alpha, beta, horizon-1)
+		result, _ = maxvalue(state.apply(transition, opponent), player, opponent, alpha, beta, horizon-1, config)
 		if result < minresult:
 			minresult = result
 			minaction = transition
@@ -54,8 +79,7 @@ def minvalue(state, player, opponent, playerpassed, opponentpassed, alpha, beta,
 	return minresult, minaction
 			
 
-def minmax(state, player, opponent, horizon=8):
+def minmax(state, player, opponent, config, horizon=8):
 	if state.win()[0] is not None: return None
-	print("")
-	v, transition = maxvalue(state, player, opponent, (), (), -math.inf, +math.inf, horizon)
+	v, transition = maxvalue(state, player, opponent, -math.inf, +math.inf, horizon, config)
 	return transition
