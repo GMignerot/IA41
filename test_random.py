@@ -22,7 +22,7 @@ while state.win()[0] is None:
 	if currentplayer == player:
 		action = random.choice(state.possibleActions(currentplayer))
 	else:
-		action = minmax(state, currentplayer, opponent, Config.AIvAI)
+		action = minmax(state, currentplayer, opponent, Config.PvAI)
 	if action is None:
 		break
 	state = state.apply(action, currentplayer)
