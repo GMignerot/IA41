@@ -46,6 +46,7 @@ class Transition (object):
 		self.value = value
 	
 	def __eq__(self, tr):
+		if tr is None: return False
 		return tr.type == self.type and tr.position == self.position and tr.value == self.value
 	
 	def __str__(self):
@@ -56,8 +57,11 @@ class Transition (object):
 
 
 class State (object):
-	def __init__(self):
-		self.board = [Slot.Square, Slot.Square, Slot.Square, Slot.Square, Slot.Empty, Slot.Square, Slot.Square, Slot.Square, Slot.Square]
+	def __init__(self, board=None):
+		if board is None:
+			self.board = [Slot.Square, Slot.Square, Slot.Square, Slot.Square, Slot.Empty, Slot.Square, Slot.Square, Slot.Square, Slot.Square]
+		else:
+			self.board = board
 		self.actioncache = {Slot.Player1: None, Slot.Player2: None}
 		self.origin = None
 		self.playerhistory = ()
@@ -69,15 +73,15 @@ class State (object):
 	def apply(self, transition, player, check=True):
 		if check:
 			if transition not in self.possibleActions(player):
-				raise ValueError("Impossible transition")
+				raise ValueError(f"Impossible transition {transition}")
 		
 		newstate = self.copy()
 		newstate.origin = self
 		newstate.originplayer = player
 		newstate.originaction = transition
 		newstate.branchlength = self.branchlength + 1
-		newstate.playerhistory = self.opponenthistory + (self, )
-		newstate.opponenthistory = self.playerhistory
+		newstate.playerhistory = self.opponenthistory
+		newstate.opponenthistory = self.playerhistory + (self, )
 		
 		if transition.type == TransitionType.AddCircle:
 			newstate.board[transition.position] = player
@@ -112,6 +116,7 @@ class State (object):
 			return self.actioncache[player]
 		else:
 			moglichkeiten = []
+			squares = [position for position in range(9) if self.board[position] == Slot.Square]
 			
 			emptypos = self.board.index(Slot.Empty)
 			for position, value in enumerate(self.board):
@@ -121,14 +126,13 @@ class State (object):
 					
 				# MoveCircle
 				if value == player:  # Gaffe, le sujet est pas clair : c’est que un pion du joueur en cours
-					for destination, value in enumerate(self.board):
-						if value == Slot.Square:
-							moglichkeiten.append(Transition(TransitionType.MoveCircle, position, destination))
+					for destination in squares:
+						moglichkeiten.append(Transition(TransitionType.MoveCircle, position, destination))
 							
 				# PushSquare
 				if emptypos in EMPTY_POSITIONS[position]:
 					transition = Transition(TransitionType.PushSquare, position, EMPTY_POSITIONS[position][emptypos])
-					if transition.type == self.originaction.type == TransitionType.PushSquare:
+					if self.originaction.type == TransitionType.PushSquare:
 						if transition.value.value[0] == -self.originaction.value.value[0] and transition.value.value[1] == -self.originaction.value.value[1]:
 							if self.origin != self.apply(transition, player, False):
 								moglichkeiten.append(transition)
@@ -155,8 +159,7 @@ class State (object):
 		return None, None
 	
 	def copy(self):
-		newstate = State()
-		newstate.board = self.board.copy()
+		newstate = State(self.board.copy())
 		return newstate
 	
 	def __eq__(self, state):
@@ -166,6 +169,9 @@ class State (object):
 	def __str__(self):
 		board = [slot.value for slot in self.board]
 		return f"{board[0:3]}\n{board[3:6]}\n{board[6:9]}"
+	
+	def __repr__(self):
+		return f"State({self.board})"
 		
 	def _possibleActions_understandable(self, player):
 		"""Lisible et avec bon algo pour les possibilités plutôt qu’un tableau opti mais moche"""

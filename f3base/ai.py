@@ -42,7 +42,7 @@ def maxvalue(state, player, opponent, alpha, beta, horizon, config):
 	if state.win()[0] is not None or (state in state.playerhistory and config == Config.AIvAI):
 		return finalvalue(state, player, opponent), None
 	elif horizon == 0:
-		return value(state, player, opponent, state.branchlength // 2), None
+		return finalvalue(state, player, opponent), None #, state.branchlength // 2), None
 	actions = state.possibleActions(player)
 	if len(actions) == 0:
 		return finalvalue(state, player, opponent, len(playerpassed)), None
@@ -62,7 +62,7 @@ def minvalue(state, player, opponent, alpha, beta, horizon, config):
 	if state.win()[0] is not None or (state in state.playerhistory and config == Config.AIvAI):
 		return -finalvalue(state, opponent, player), None
 	elif horizon == 0:
-		return -value(state, opponent, player, state.branchlength // 2), None
+		return -finalvalue(state, opponent, player), None #, state.branchlength // 2), None
 	actions = state.possibleActions(opponent)
 	if len(actions) == 0:
 		return finalvalue(state, player, opponent, len(playerpassed)), None
@@ -80,6 +80,5 @@ def minvalue(state, player, opponent, alpha, beta, horizon, config):
 			
 
 def minmax(state, player, opponent, config, horizon=8):
-	if state.win()[0] is not None: return None
 	v, transition = maxvalue(state, player, opponent, -math.inf, +math.inf, horizon, config)
 	return transition
