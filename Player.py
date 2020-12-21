@@ -8,8 +8,9 @@ class Player:
 		self.is_human = is_human
 		self.pion_choice = pion_choice
 		self.pion_remaining = 3
+		self.double_push = [-1,-1] #premier : numéro de la case vide, deuxième : pion qu'on peut pas déplacer
 
-	def action_player(self, action, etat,game):  #les 3 coups possible d'un joueur
+	def action_player(self, action, etat,game,player):  #les 3 coups possible d'un joueur
 
 		if action == 1:  # 1 : action de placer un pion
 
@@ -39,7 +40,7 @@ class Player:
 
 		if action == 2: # 2 : action de déplacer un carré
 
-			new_etat = self.move_square(etat,game)	
+			new_etat = self.move_square(etat,game,player)	
 
 			return new_etat
 
@@ -61,7 +62,7 @@ class Player:
 
 		return new_etat
 
-	def move_square(self,etat,game):  #permet de déplacer un ou deux carrés sur le plateau
+	def move_square(self,etat,game,player):  #permet de déplacer un ou deux carrés sur le plateau
 
 		empty_list = [[1,2,3,6],[0,2,4,7],[0,1,5,8],[0,4,5,6],[1,3,5,7],[2,3,4,8],[0,3,7,8],[1,4,6,8],[2,5,6,7]] #si la case vide est en 0, le joueur peut déplacer le carré 1, 2, 4 et 6 mais pas les autres
 
@@ -71,13 +72,17 @@ class Player:
 
 		possible_move = empty_list[empty_case]
 
+		if player.double_push[0]==empty_case:
+			possible_move.remove(player.double_push[1])
+
 		valid_coord = False
 		while valid_coord is False:  #on s'assure que le carré qu'on veut déplacer est déplacable
 
 			coord_square = int(input("\n Quel carré voulez vous déplacer ? "+str(possible_move)+"\n"))
-			for i in range(4):
+			for i in range(len(possible_move)):
 				if possible_move[i] == coord_square:
 					valid_coord = True
+
 
 			if valid_coord is False:
 				print("\n Vous ne pouvez pas déplacer ce carré, réessayez\n")
@@ -91,64 +96,66 @@ class Player:
 				new_etat[empty_case]=etat[1]
 				new_etat[1]=etat[2]
 				new_etat[2] = 0
-
+				self.double_push = [2,0]
 		elif empty_case == 0 and coord_square==6:
 				new_etat[empty_case]=etat[3]
 				new_etat[3]=etat[6]
 				new_etat[6] = 0		
-
+				self.double_push = [6,0]				
 		elif empty_case == 1 and coord_square==7:
 				new_etat[empty_case]=etat[4]
 				new_etat[4]=etat[7]
 				new_etat[7] = 0		
-
+				self.double_push = [7,1]
 		elif empty_case == 2 and coord_square==0:
 				new_etat[empty_case]=etat[1]
 				new_etat[1]=etat[0]
 				new_etat[0] = 0	
-
+				self.double_push = [0,2]
 		elif empty_case == 2 and coord_square==8:
 				new_etat[empty_case]=etat[5]
 				new_etat[5]=etat[8]
 				new_etat[8] = 0	
-
+				self.double_push = [8,2]
 		elif empty_case == 3 and coord_square==5:
 				new_etat[empty_case]=etat[4]
 				new_etat[4]=etat[5]
 				new_etat[5] = 0	
-
+				self.double_push = [5,3]
 		elif empty_case == 5 and coord_square==3:
 				new_etat[empty_case]=etat[4]
 				new_etat[4]=etat[3]
 				new_etat[3] = 0
-
+				self.double_push = [3,5]
 		elif empty_case == 6 and coord_square==0:
 				new_etat[empty_case]=etat[3]
 				new_etat[3]=etat[0]
 				new_etat[0] = 0	
-
+				self.double_push = [0,6]
 		elif empty_case == 6 and coord_square==8:
 				new_etat[empty_case]=etat[7]
 				new_etat[7]=etat[8]
 				new_etat[8] = 0	
-
+				self.double_push = [8,6]
 		elif empty_case == 7 and coord_square==1:
 				new_etat[empty_case]=etat[4]
 				new_etat[4]=etat[1]
 				new_etat[1] = 0	
-
+				self.double_push = [1,7]
 		elif empty_case == 8 and coord_square==2:
 				new_etat[empty_case]=etat[5]
 				new_etat[5]=etat[2]
 				new_etat[2] = 0	
-
+				self.double_push = [2,8]
 		elif empty_case == 8 and coord_square==6:
 				new_etat[empty_case]=etat[7]
 				new_etat[7]=etat[6]
 				new_etat[6] = 0	
+				self.double_push = [6,8]				
 		else:
 			new_etat[empty_case]=etat[coord_square]  #poussée simple
 			new_etat[coord_square]=0
+			self.double_push = -1
 
 		return new_etat
 

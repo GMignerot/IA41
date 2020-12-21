@@ -8,7 +8,7 @@ class Game:
 		self.state = [1,1,1,1,0,1,1,1,1]
 
 	def reset(self):
-		self.state = [1,1,1,1,0,1,1,1,1] 
+		self.state = [0,1,1,1,1,1,1,1,1] 
 		
 	def display(self):
 
@@ -155,7 +155,7 @@ def play(game,p1,p2):  #fonction permettant de faire jouer 2 joueurs
 
 
 			if action > 0 and action < 4:
-				new_state = players[p%2].action_player(action,game.state,game) #à partir de l'action du joueur, crée le nouvel état du plateau
+				new_state = players[p%2].action_player(action,game.state,game,players[(p%2)-1]) #à partir de l'action du joueur, crée le nouvel état du plateau
 
 				game.state = new_state   #l'état du jeu change
 			
