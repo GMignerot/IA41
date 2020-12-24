@@ -116,12 +116,18 @@ class State (object):
 			return self.actioncache[player]
 		else:
 			moglichkeiten = []
-			squares = [position for position in range(9) if self.board[position] == Slot.Square]
+			playercircles = 0
+			squares = []
+			for i, value in enumerate(self.board):
+				if value == Slot.Square:
+					squares.append(i)
+				elif value == player:
+					playercircles += 1
 			
 			emptypos = self.board.index(Slot.Empty)
 			for position, value in enumerate(self.board):
 				# AddCircle
-				if value == Slot.Square:
+				if value == Slot.Square and playercircles < 3:
 					moglichkeiten.append(Transition(TransitionType.AddCircle, position))
 					
 				# MoveCircle
